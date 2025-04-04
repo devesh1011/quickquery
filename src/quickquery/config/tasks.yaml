@@ -1,0 +1,38 @@
+generate_query_task:
+  description: >
+    Take a natural language question {natural_query} from the user and convert it into a valid, optimized SQL query 
+    that can be executed against a relational database. The query should be relevant to the user’s intent 
+    and formatted correctly for immediate validation and execution.
+  expected_output: >
+    A SQL query which contains the code relevant to the natural question
+  agent: query_generator
+
+validate_query_task:
+  description: >
+    Review the SQL query for syntax correctness, security risks (e.g., DROP, DELETE, UPDATE), and performance issues. 
+    Ensure it adheres to best practices and is safe to execute against the database without risking data integrity.
+  expected_output: >
+    A JSON object with this given format:
+    {
+      "is_valid": true,
+      "issues_found": [],
+      "recommendations": []
+    }
+
+  agent: query_validator
+
+visualize_query_task:
+  description: >
+    Create a visual representation of the SQL query results using a suitable chart type 
+    (e.g., bar chart, line chart, pie chart) based on the data format. The visualization should be clear, 
+    concise, and aid in understanding trends, comparisons, or distributions within the data.
+  expected_output: >
+
+  agent: visualizer_agent
+
+query_insights_task:
+  description: >
+
+  expected_output: >
+
+  agent: insight_agent
