@@ -1,62 +1,68 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
+from pydantic import BaseModel
+from .tools import SQLExecutor
 
-# If you want to run a snippet of code before or after the crew starts,
-# you can use the @before_kickoff and @after_kickoff decorators
-# https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
+sql_executor = SQLExecutor()
+
+
+class Validation(BaseModel):
+    sql_query: str
+    is_valid: str
+    issues_found: list[str]
+
+
+class Results(BaseModel):
+    rows: list[dict]
+
 
 @CrewBase
-class Quickquery():
+class Quickquery:
     """Quickquery crew"""
 
-    # Learn more about YAML configuration files here:
-    # Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
-    # Tasks: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
-    agents_config = 'config/agents.yaml'
-    tasks_config = 'config/tasks.yaml'
-
-    # If you would like to add tools to your agents, you can learn more about it here:
-    # https://docs.crewai.com/concepts/agents#agent-tools
-    @agent
-    def researcher(self) -> Agent:
-        return Agent(
-            config=self.agents_config['researcher'],
-            verbose=True
-        )
+    agents_config = "config/agents.yaml"
+    tasks_config = "config/tasks.yaml"
 
     @agent
-    def reporting_analyst(self) -> Agent:
-        return Agent(
-            config=self.agents_config['reporting_analyst'],
-            verbose=True
-        )
+    def query_generator(self) -> Agent:
+        return Agent(config=self.agents_config["query_generator"], verbose=True)
 
-    # To learn more about structured task outputs,
-    # task dependencies, and task callbacks, check out the documentation:
-    # https://docs.crewai.com/concepts/tasks#overview-of-a-task
+    @agent
+    def query_validator(self) -> Agent:
+        return Agent(config=self.agents_config["query_validator"], verbose=True)
+
+    @agent
+    def query_runner_agent(self):
+        return Agent(config=self.agents_config["query_runner_agent"])
+
     @task
-    def research_task(self) -> Task:
+    def generate_query_task(self) -> Task:
         return Task(
-            config=self.tasks_config['research_task'],
+            config=self.tasks_config["generate_query_task"],
         )
 
     @task
-    def reporting_task(self) -> Task:
+    def validate_query_task(self) -> Task:
         return Task(
-            config=self.tasks_config['reporting_task'],
-            output_file='report.md'
+            config=self.tasks_config["validate_query_task"],
+            output_pydantic=Validation,
+        )
+
+    @task
+    def run_query_task(self) -> Task:
+        return Task(
+            config=self.tasks_config["run_query_task"],
+            output_pydantic=Results,
+            tools=[sql_executor],
         )
 
     @crew
     def crew(self) -> Crew:
-        """Creates the Quickquery crew"""
-        # To learn how to add knowledge sources to your crew, check out the documentation:
-        # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
+        """Creates the QuickQuery crew"""
 
         return Crew(
-            agents=self.agents, # Automatically created by the @agent decorator
-            tasks=self.tasks, # Automatically created by the @task decorator
+            agents=self.agents,
+            tasks=self.tasks,
             process=Process.sequential,
             verbose=True,
-            # process=Process.hierarchical, # In case you wanna use that instead https://docs.crewai.com/how-to/Hierarchical/
         )
